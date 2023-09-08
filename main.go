@@ -20,21 +20,25 @@ type Config struct {
 	Parallel bool              `yaml:"parallel"`
 	Usage    string            `yaml:"usage"` // Add the usage field
 	Tasks    []struct {
-		Name    string   `yaml:"name"`
-		Cmds    []string `yaml:"cmds"`
-		Silent  bool     `yaml:"silent"`
+		Name   string   `yaml:"name"`
+		Cmds   []string `yaml:"cmds"`
+		Silent bool     `yaml:"silent"`
 	} `yaml:"modules"`
 }
 
+var (
+	cmdshell string
+)
 
 func main() {
 	var (
 		taskFile  string
 		variables map[string]string
-		quietMode  bool // Flag to indicate quiet mode
+		quietMode bool // Flag to indicate quiet mode
 	)
 
 	flag.StringVar(&taskFile, "w", "", "Path to the workflow YAML file")
+	flag.StringVar(&cmdshell, "s", "sh", "Shell to system usage")
 	flag.BoolVar(&quietMode, "q", false, "Suppress banner")
 	flag.Parse()
 	log.SetFlags(0)
@@ -62,7 +66,7 @@ func main() {
 
 `))
 
-}
+	}
 
 	var defaultVars map[string]string
 	yamlFileContent, err := ioutil.ReadFile(taskFile)
@@ -75,7 +79,6 @@ func main() {
 	}
 
 	variables = parseArgs(defaultVars)
-
 
 	if taskFile == "" {
 		fmt.Println("Usage: rayder -w workflow.yaml [variable assignments e.g. DOMAIN=example.host]")
@@ -140,12 +143,6 @@ func parseArgs(defaultVars map[string]string) map[string]string {
 	return variables
 }
 
-
-
-
-
-
-
 func runAllTasks(config Config, variables map[string]string, cyan, magenta, white, yellow, red, green func(a ...interface{}) string) {
 	var wg sync.WaitGroup
 	var errorOccurred bool
@@ -172,7 +169,7 @@ func runAllTasks(config Config, variables map[string]string, cyan, magenta, whit
 				return // Exit the function immediately if an error occurs
 			}
 		}
-	} 
+	}
 
 	if config.Parallel {
 		wg.Wait()
@@ -213,7 +210,7 @@ func runTask(taskName string, cmds []string, silent bool, vars map[string]string
 
 func executeCommand(cmdStr string, silent bool, vars map[string]string) error {
 	cmdStr = replacePlaceholders(cmdStr, vars)
-	execCmd := exec.Command("sh", "-c", cmdStr)
+	execCmd := exec.Command(cmdshell, "-c", cmdStr)
 
 	if silent {
 		execCmd.Stdout = nil
